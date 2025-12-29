@@ -6,26 +6,30 @@ from flask import Flask, request, send_file, jsonify
 from yt_dlp import YoutubeDL
 
 DOWNLOAD_DIR = "downloads"
-COOKIE_FILE = "cookies.txt"        # auto-used when available
-EXPIRY_SECONDS = 2 * 60 * 60
+COOKIE_FILE = "cookies.txt"
+EXPIRY_SECONDS = 2 * 60 * 60  # 2 hours
 
 app = Flask(__name__)
 os.makedirs(DOWNLOAD_DIR, exist_ok=True)
 
 
+# ---------- AUTO DELETE OLD FILES ----------
 def cleanup_loop():
     while True:
         now = time.time()
         for f in os.listdir(DOWNLOAD_DIR):
             p = os.path.join(DOWNLOAD_DIR, f)
             if os.path.isfile(p) and now - os.path.getmtime(p) > EXPIRY_SECONDS:
-                try: os.remove(p)
-                except: pass
+                try:
+                    os.remove(p)
+                except:
+                    pass
         time.sleep(300)
 
 threading.Thread(target=cleanup_loop, daemon=True).start()
 
 
+# ---------- BASE YTDLP OPTIONS ----------
 def base_ydl_opts(out_path, quality, use_cookies=False):
     opts = {
         "outtmpl": out_path,
@@ -46,15 +50,17 @@ def base_ydl_opts(out_path, quality, use_cookies=False):
     return opts
 
 
+# ---------- UPLOAD COOKIES ----------
 @app.route("/upload-cookies", methods=["POST"])
 def upload_cookies():
     file = request.files.get("file")
     if not file:
-        return {"error": "cookies.txt file required"}, 400
+        return jsonify({"error": "cookies.txt file required"}), 400
     file.save(COOKIE_FILE)
-    return {"status": "cookies stored", "using": COOKIE_FILE}
+    return jsonify({"status": "cookies stored", "using": COOKIE_FILE})
 
 
+# ---------- DOWNLOAD + META ----------
 @app.route("/download", methods=["POST"])
 def download():
     data = request.json or {}
@@ -63,7 +69,7 @@ def download():
     dry = data.get("dry", False)
 
     if not url:
-        return {"error": "url required"}, 400
+        return jsonify({"error": "url required"}), 400
 
     file_id = str(uuid.uuid4())
     out_path = os.path.join(DOWNLOAD_DIR, f"{file_id}.%(ext)s")
@@ -76,53 +82,73 @@ def download():
         return info, filename
 
     try:
-        # Try **without cookies first**
+        # Try without cookies first
         info, filename = run_dl(use_cookies=False)
 
     except Exception as e:
         msg = str(e).lower()
 
-        # Auto-detect cookie-required cases
-        if "cookies" in msg or "not a bot" in msg or "sign in" in msg:
-            # Retry **with cookies if available**
+        # Detect cookie-required situations
+        cookie_needed_keywords = [
+            "cookies",
+            "sign in",
+            "not a bot",
+            "confirm you’re not a bot",
+            "verify",
+        ]
+
+        if any(k in msg for k in cookie_needed_keywords):
+            # Retry with cookies if available
             if os.path.exists(COOKIE_FILE):
                 try:
                     info, filename = run_dl(use_cookies=True)
                 except Exception as e2:
-                    return {
+                    return jsonify({
                         "error": "Cookies expired or invalid",
                         "needs_cookies": True,
                         "details": str(e2),
-                    }, 403
+                    }), 403
             else:
-                return {
+                return jsonify({
                     "error": "This video requires sign-in verification",
                     "needs_cookies": True,
-                    "hint": "Upload cookies.txt via /upload-cookies",
-                }, 403
+                    "hint": "Upload cookies.txt using /upload-cookies",
+                }), 403
         else:
-            return {"error": str(e)}, 500
+            return jsonify({"error": str(e)}), 500
 
+    # DRY MODE — metadata only (used by UI preview)
     if dry:
-        return {"info": info}
+        return jsonify({"info": info})
 
-    return {
+    return jsonify({
         "file_id": file_id,
         "filename": os.path.basename(filename),
         "download_url": f"/file/{os.path.basename(filename)}",
         "expires_in": "2 hours",
         "cookies_used": os.path.exists(COOKIE_FILE)
-    }
+    })
 
 
+# ---------- SERVE FILE ----------
 @app.route("/file/<name>")
 def serve(name):
     path = os.path.join(DOWNLOAD_DIR, name)
     if not os.path.exists(path):
-        return {"error": "file expired or not found"}, 404
+        return jsonify({"error": "file expired or not found"}), 404
     return send_file(path, as_attachment=True)
 
 
+# ---------- HEALTH ----------
 @app.route("/")
 def home():
-    return {"status": "yt-dlp backend running", "cookies": os.path.exists(COOKIE_FILE)}
+    return jsonify({
+        "status": "yt-dlp backend running",
+        "cookies_present": os.path.exists(COOKIE_FILE)
+    })
+
+
+# ---------- RENDER PORT SUPPORT ----------
+if __name__ == "__main__":
+    port = int(os.environ.get("PORT", 10000))
+    app.run(host="0.0.0.0", port=port)
