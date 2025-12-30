@@ -29,6 +29,33 @@ def cleanup_loop():
 threading.Thread(target=cleanup_loop, daemon=True).start()
 
 
+# ---------- SMART FORMAT PICKER ----------
+def pick_best_available_format(info, requested):
+    formats = info.get("formats", []) or []
+
+    # direct match (format_id)
+    for f in formats:
+        if f.get("format_id") == requested:
+            return requested
+
+    # resolution fallback e.g. "720p"
+    if isinstance(requested, str) and requested.endswith("p"):
+        try:
+            req_h = int(requested.replace("p", ""))
+            candidates = [
+                f for f in formats
+                if f.get("height") and f["height"] <= req_h
+            ]
+            if candidates:
+                # closest lower / equal height
+                return sorted(candidates, key=lambda x: x["height"])[-1]["format_id"]
+        except:
+            pass
+
+    # last fallback → best
+    return "best"
+
+
 # ---------- BASE YTDLP OPTIONS ----------
 def base_ydl_opts(out_path, quality, use_cookies=False):
     opts = {
@@ -53,14 +80,14 @@ def base_ydl_opts(out_path, quality, use_cookies=False):
 # ---------- UPLOAD COOKIES ----------
 @app.route("/upload-cookies", methods=["POST"])
 def upload_cookies():
-    file = request.files.get("file")
-    if not file:
+    f = request.files.get("file")
+    if not f:
         return jsonify({"error": "cookies.txt file required"}), 400
-    file.save(COOKIE_FILE)
-    return jsonify({"status": "cookies stored", "using": COOKIE_FILE})
+    f.save(COOKIE_FILE)
+    return jsonify({"status": "cookies stored"})
 
 
-# ---------- DOWNLOAD + META ----------
+# ---------- DOWNLOAD ----------
 @app.route("/download", methods=["POST"])
 def download():
     data = request.json or {}
@@ -74,50 +101,41 @@ def download():
     file_id = str(uuid.uuid4())
     out_path = os.path.join(DOWNLOAD_DIR, f"{file_id}.%(ext)s")
 
-    def run_dl(use_cookies):
-        opts = base_ydl_opts(out_path, quality, use_cookies)
+    def run_dl(q, use_cookies):
+        opts = base_ydl_opts(out_path, q, use_cookies)
         with YoutubeDL(opts) as ydl:
             info = ydl.extract_info(url, download=not dry)
             filename = None if dry else ydl.prepare_filename(info)
         return info, filename
 
     try:
-        # Try without cookies first
-        info, filename = run_dl(use_cookies=False)
+        # First run meta (no cookies)
+        info, filename = run_dl(quality, use_cookies=False)
+
+        # SMART QUALITY FIX
+        if not dry and quality != "best":
+            quality_adj = pick_best_available_format(info, quality)
+            if quality_adj != quality:
+                info, filename = run_dl(quality_adj, use_cookies=os.path.exists(COOKIE_FILE))
+                quality = quality_adj
 
     except Exception as e:
         msg = str(e).lower()
 
-        # Detect cookie-required situations
-        cookie_needed_keywords = [
-            "cookies",
-            "sign in",
-            "not a bot",
-            "confirm you’re not a bot",
-            "verify",
-        ]
-
-        if any(k in msg for k in cookie_needed_keywords):
-            # Retry with cookies if available
+        # retry with cookies if sign-in required
+        cookie_msgs = ["cookies", "sign in", "not a bot", "verify", "consent"]
+        if any(k in msg for k in cookie_msgs):
             if os.path.exists(COOKIE_FILE):
-                try:
-                    info, filename = run_dl(use_cookies=True)
-                except Exception as e2:
-                    return jsonify({
-                        "error": "Cookies expired or invalid",
-                        "needs_cookies": True,
-                        "details": str(e2),
-                    }), 403
+                info, filename = run_dl(quality, use_cookies=True)
             else:
                 return jsonify({
                     "error": "This video requires sign-in verification",
-                    "needs_cookies": True,
-                    "hint": "Upload cookies.txt using /upload-cookies",
+                    "needs_cookies": True
                 }), 403
         else:
             return jsonify({"error": str(e)}), 500
 
-    # DRY MODE — metadata only (used by UI preview)
+    # dry mode → metadata only
     if dry:
         return jsonify({"info": info})
 
@@ -125,6 +143,7 @@ def download():
         "file_id": file_id,
         "filename": os.path.basename(filename),
         "download_url": f"/file/{os.path.basename(filename)}",
+        "quality_used": quality,
         "expires_in": "2 hours",
         "cookies_used": os.path.exists(COOKIE_FILE)
     })
@@ -133,13 +152,13 @@ def download():
 # ---------- SERVE FILE ----------
 @app.route("/file/<name>")
 def serve(name):
-    path = os.path.join(DOWNLOAD_DIR, name)
-    if not os.path.exists(path):
+    p = os.path.join(DOWNLOAD_DIR, name)
+    if not os.path.exists(p):
         return jsonify({"error": "file expired or not found"}), 404
-    return send_file(path, as_attachment=True)
+    return send_file(p, as_attachment=True)
 
 
-# ---------- HEALTH ----------
+# ---------- STATUS ----------
 @app.route("/")
 def home():
     return jsonify({
@@ -148,7 +167,7 @@ def home():
     })
 
 
-# ---------- RENDER PORT SUPPORT ----------
+# ---------- PORT (Render / Railway / etc) ----------
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 10000))
     app.run(host="0.0.0.0", port=port)
