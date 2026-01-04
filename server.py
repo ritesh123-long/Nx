@@ -15,7 +15,9 @@ app = Flask(__name__)
 # ✅ enable CORS
 CORS(
     app,
-    origins=["https://nx-downloader.free.nf"],   # ⚠️ apna frontend origin
+    origins=["https://nx-downloader.free.nf",
+             "http://nx-downloader.free.nf"
+            ],   # ⚠️ apna frontend origin
     methods=["GET", "POST", "OPTIONS"],
     allow_headers=["Content-Type", "Authorization"],
 )
