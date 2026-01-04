@@ -4,14 +4,23 @@ import uuid
 import threading
 from flask import Flask, request, send_file, jsonify
 from yt_dlp import YoutubeDL
+from flask_cors import CORS   # ✅ added
 
 DOWNLOAD_DIR = "downloads"
 COOKIE_FILE = "cookies.txt"
 EXPIRY_SECONDS = 2 * 60 * 60  # 2 hours
 
 app = Flask(__name__)
-os.makedirs(DOWNLOAD_DIR, exist_ok=True)
 
+# ✅ enable CORS
+CORS(
+    app,
+    origins=["https://nx-downloader.free.nf"],   # ⚠️ apna frontend origin
+    methods=["GET", "POST", "OPTIONS"],
+    allow_headers=["Content-Type", "Authorization"],
+)
+
+os.makedirs(DOWNLOAD_DIR, exist_ok=True)
 
 # ---------- AUTO DELETE OLD FILES ----------
 def cleanup_loop():
@@ -28,17 +37,13 @@ def cleanup_loop():
 
 threading.Thread(target=cleanup_loop, daemon=True).start()
 
-
+# (rest of your code unchanged…)
 # ---------- SMART FORMAT PICKER ----------
 def pick_best_available_format(info, requested):
     formats = info.get("formats", []) or []
-
-    # direct match (format_id)
     for f in formats:
         if f.get("format_id") == requested:
             return requested
-
-    # resolution fallback e.g. "720p"
     if isinstance(requested, str) and requested.endswith("p"):
         try:
             req_h = int(requested.replace("p", ""))
@@ -47,16 +52,11 @@ def pick_best_available_format(info, requested):
                 if f.get("height") and f["height"] <= req_h
             ]
             if candidates:
-                # closest lower / equal height
                 return sorted(candidates, key=lambda x: x["height"])[-1]["format_id"]
         except:
             pass
-
-    # last fallback → best
     return "best"
 
-
-# ---------- BASE YTDLP OPTIONS ----------
 def base_ydl_opts(out_path, quality, use_cookies=False):
     opts = {
         "outtmpl": out_path,
@@ -76,8 +76,6 @@ def base_ydl_opts(out_path, quality, use_cookies=False):
         opts["cookiefile"] = COOKIE_FILE
     return opts
 
-
-# ---------- UPLOAD COOKIES ----------
 @app.route("/upload-cookies", methods=["POST"])
 def upload_cookies():
     f = request.files.get("file")
@@ -86,8 +84,6 @@ def upload_cookies():
     f.save(COOKIE_FILE)
     return jsonify({"status": "cookies stored"})
 
-
-# ---------- DOWNLOAD ----------
 @app.route("/download", methods=["POST"])
 def download():
     data = request.json or {}
@@ -109,20 +105,17 @@ def download():
         return info, filename
 
     try:
-        # First run meta (no cookies)
         info, filename = run_dl(quality, use_cookies=False)
-
-        # SMART QUALITY FIX
         if not dry and quality != "best":
             quality_adj = pick_best_available_format(info, quality)
             if quality_adj != quality:
-                info, filename = run_dl(quality_adj, use_cookies=os.path.exists(COOKIE_FILE))
+                info, filename = run_dl(
+                    quality_adj,
+                    use_cookies=os.path.exists(COOKIE_FILE)
+                )
                 quality = quality_adj
-
     except Exception as e:
         msg = str(e).lower()
-
-        # retry with cookies if sign-in required
         cookie_msgs = ["cookies", "sign in", "not a bot", "verify", "consent"]
         if any(k in msg for k in cookie_msgs):
             if os.path.exists(COOKIE_FILE):
@@ -135,7 +128,6 @@ def download():
         else:
             return jsonify({"error": str(e)}), 500
 
-    # dry mode → metadata only
     if dry:
         return jsonify({"info": info})
 
@@ -148,8 +140,6 @@ def download():
         "cookies_used": os.path.exists(COOKIE_FILE)
     })
 
-
-# ---------- SERVE FILE ----------
 @app.route("/file/<name>")
 def serve(name):
     p = os.path.join(DOWNLOAD_DIR, name)
@@ -157,8 +147,6 @@ def serve(name):
         return jsonify({"error": "file expired or not found"}), 404
     return send_file(p, as_attachment=True)
 
-
-# ---------- STATUS ----------
 @app.route("/")
 def home():
     return jsonify({
@@ -166,8 +154,6 @@ def home():
         "cookies_present": os.path.exists(COOKIE_FILE)
     })
 
-
-# ---------- PORT (Render / Railway / etc) ----------
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 10000))
     app.run(host="0.0.0.0", port=port)
