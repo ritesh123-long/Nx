@@ -149,11 +149,15 @@ def serve(name):
         return jsonify({"error": "file expired or not found"}), 404
     return send_file(p, as_attachment=True)
 
-@app.route("/")
+@app.route("/admin")
 def home():
     return jsonify({
         "status": "yt-dlp backend running",
         "cookies_present": os.path.exists(COOKIE_FILE)
+
+@app.get("/")
+def home():
+    return render_template("index.html")
     })
 
 if __name__ == "__main__":
