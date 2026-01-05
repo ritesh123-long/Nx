@@ -1,0 +1,1902 @@
+<!DOCTYPE html>
+<html  lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NX Downloader</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="icon" href="favicon.png" type="image/x-icon">
+    <style>
+        :root {
+            /* Light Theme */
+            --primary-color: #6366f1;
+            --primary-dark: #4f46e5;
+            --secondary-color: #8b5cf6;
+            --accent-color: #ec4899;
+            --success-color: #10b981;
+            --warning-color: #f59e0b;
+            --danger-color: #ef4444;
+            --dark-color: #111827;
+            --darker-color: #0f172a;
+            --light-color: #f8fafc;
+            --lighter-color: #ffffff;
+            --gray-color: #64748b;
+            --card-bg: rgba(255, 255, 255, 0.95);
+            --border-color: rgba(0, 0, 0, 0.1);
+            --shadow-color: rgba(0, 0, 0, 0.1);
+            
+            --border-radius: 16px;
+            --border-radius-sm: 8px;
+            --box-shadow: 0 10px 30px var(--shadow-color);
+            --box-shadow-lg: 0 20px 60px var(--shadow-color);
+            --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            --gradient: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+        }
+
+        [data-theme="dark"] {
+            /* Dark Theme */
+            --dark-color: #f8fafc;
+            --darker-color: #e2e8f0;
+            --light-color: #111827;
+            --lighter-color: #0f172a;
+            --gray-color: #94a3b8;
+            --card-bg: rgba(30, 41, 59, 0.95);
+            --border-color: rgba(255, 255, 255, 0.1);
+            --shadow-color: rgba(0, 0, 0, 0.3);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: var(--lighter-color);
+            color: var(--dark-color);
+            min-height: 100vh;
+            overflow-x: hidden;
+            transition: var(--transition);
+        }
+
+        body::before {
+            content: '';
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-image: 
+                radial-gradient(circle at 10% 20%, rgba(99, 102, 241, 0.05) 0%, transparent 20%),
+                radial-gradient(circle at 90% 80%, rgba(139, 92, 246, 0.05) 0%, transparent 20%);
+            z-index: -1;
+        }
+
+        [data-theme="dark"] body::before {
+            background-image: 
+                radial-gradient(circle at 10% 20%, rgba(99, 102, 241, 0.1) 0%, transparent 20%),
+                radial-gradient(circle at 90% 80%, rgba(139, 92, 246, 0.1) 0%, transparent 20%);
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 20px;
+        }
+
+        /* Theme Toggle */
+        .theme-toggle {
+            position: fixed;
+            top: 20px;
+            right: 80px;
+            z-index: 1000;
+            animation: slideInRight 0.5s ease;
+        }
+
+        .toggle-btn {
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            background: var(--card-bg);
+            border: 1px solid var(--border-color);
+            box-shadow: var(--box-shadow);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.2rem;
+            color: var(--dark-color);
+            transition: var(--transition);
+        }
+
+        .toggle-btn:hover {
+            transform: rotate(30deg);
+            box-shadow: 0 5px 20px var(--shadow-color);
+        }
+
+        /* Header Styles */
+        .header {
+            padding: 30px 0;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .header::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 1px;
+            background: linear-gradient(90deg, transparent, var(--primary-color), transparent);
+        }
+
+        .logo-container {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            margin-bottom: 30px;
+            animation: fadeInDown 0.8s ease;
+        }
+
+        .logo {
+            width: 60px;
+            height: 60px;
+            background: var(--gradient);
+            border-radius: var(--border-radius);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 28px;
+            font-weight: bold;
+            color: white;
+            box-shadow: var(--box-shadow);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .logo::after {
+            content: '';
+            position: absolute;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background: linear-gradient(45deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+            transform: rotate(45deg);
+            animation: shine 3s infinite;
+        }
+
+        .logo-text {
+            font-size: 2.5rem;
+            font-weight: 800;
+            background: var(--gradient);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .tagline {
+            color: var(--gray-color);
+            font-size: 1.1rem;
+            margin-top: 5px;
+            animation: fadeIn 1s ease 0.3s both;
+        }
+
+        /* API Status */
+        .api-status {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 1000;
+            animation: slideInRight 0.5s ease;
+        }
+
+        .status-badge {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 10px 20px;
+            background: var(--card-bg);
+            backdrop-filter: blur(10px);
+            border-radius: 50px;
+            border: 1px solid var(--border-color);
+            box-shadow: var(--box-shadow);
+        }
+
+        .status-indicator {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            background: var(--gray-color);
+            transition: var(--transition);
+        }
+
+        .status-indicator.online {
+            background: var(--success-color);
+            box-shadow: 0 0 10px var(--success-color);
+        }
+
+        .status-indicator.offline {
+            background: var(--danger-color);
+            box-shadow: 0 0 10px var(--danger-color);
+        }
+
+        /* Main Content */
+        .main-content {
+            padding: 40px 0;
+        }
+
+        .download-card {
+            background: var(--card-bg);
+            backdrop-filter: blur(10px);
+            border-radius: var(--border-radius);
+            padding: 40px;
+            border: 1px solid var(--border-color);
+            box-shadow: var(--box-shadow);
+            margin-bottom: 40px;
+            animation: fadeInUp 0.8s ease 0.2s both;
+        }
+
+        .card-title {
+            font-size: 1.8rem;
+            margin-bottom: 30px;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .card-title i {
+            color: var(--primary-color);
+        }
+
+        /* Input Section */
+        .input-section {
+            margin-bottom: 30px;
+        }
+
+        .input-group {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+
+        .url-input {
+            flex: 1;
+            padding: 18px 25px;
+            background: var(--lighter-color);
+            border: 2px solid var(--border-color);
+            border-radius: var(--border-radius);
+            color: var(--dark-color);
+            font-size: 1rem;
+            transition: var(--transition);
+        }
+
+        .url-input:focus {
+            outline: none;
+            border-color: var(--primary-color);
+            box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.2);
+        }
+
+        .url-input::placeholder {
+            color: var(--gray-color);
+        }
+
+        /* Buttons */
+        .btn {
+            padding: 18px 35px;
+            border: none;
+            border-radius: var(--border-radius);
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: var(--transition);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .btn::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+            transition: 0.5s;
+        }
+
+        .btn:hover::before {
+            left: 100%;
+        }
+
+        .btn-primary {
+            background: var(--gradient);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 25px rgba(99, 102, 241, 0.4);
+        }
+
+        .btn-secondary {
+            background: var(--card-bg);
+            color: var(--dark-color);
+            border: 1px solid var(--border-color);
+        }
+
+        .btn-secondary:hover {
+            background: var(--primary-color);
+            color: white;
+            border-color: var(--primary-color);
+            transform: translateY(-2px);
+        }
+
+        .btn-sm {
+            padding: 10px 20px;
+            font-size: 0.9rem;
+        }
+
+        .btn-icon {
+            padding: 12px;
+            width: 45px;
+            height: 45px;
+        }
+
+        .btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none !important;
+            box-shadow: none !important;
+        }
+
+        /* Progress Bar */
+        .progress-container {
+            margin: 20px 0;
+            display: none;
+        }
+
+        .progress-header {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 10px;
+            font-size: 0.9rem;
+            color: var(--gray-color);
+        }
+
+        .progress-bar {
+            height: 10px;
+            background: var(--lighter-color);
+            border-radius: 5px;
+            overflow: hidden;
+            border: 1px solid var(--border-color);
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: var(--gradient);
+            width: 0%;
+            transition: width 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .progress-fill::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.4), transparent);
+            animation: shimmer 2s infinite;
+        }
+
+        /* Supported Sites */
+        .supported-sites {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            color: var(--gray-color);
+            font-size: 0.9rem;
+        }
+
+        .site-icons {
+            display: flex;
+            gap: 15px;
+        }
+
+        .site-icons i {
+            font-size: 1.2rem;
+            opacity: 0.7;
+            transition: var(--transition);
+        }
+
+        .site-icons i:hover {
+            opacity: 1;
+            color: var(--primary-color);
+            transform: translateY(-2px);
+        }
+
+        /* Preview Section */
+        .preview-section {
+            display: none;
+            animation: fadeIn 0.5s ease;
+        }
+
+        .preview-section.active {
+            display: block;
+        }
+
+        .preview-card {
+            background: var(--lighter-color);
+            border-radius: var(--border-radius);
+            padding: 30px;
+            margin-bottom: 30px;
+            border: 1px solid var(--border-color);
+        }
+
+        .preview-content {
+            display: grid;
+            grid-template-columns: 300px 1fr;
+            gap: 30px;
+        }
+
+        @media (max-width: 768px) {
+            .preview-content {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .thumbnail-container {
+            position: relative;
+            border-radius: var(--border-radius-sm);
+            overflow: hidden;
+            aspect-ratio: 16/9;
+        }
+
+        .thumbnail {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            transition: var(--transition);
+            cursor: pointer;
+        }
+
+        .thumbnail:hover {
+            transform: scale(1.05);
+        }
+
+        .thumbnail-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.5);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            opacity: 0;
+            transition: var(--transition);
+        }
+
+        .thumbnail-container:hover .thumbnail-overlay {
+            opacity: 1;
+        }
+
+        .thumbnail-btn {
+            background: rgba(255, 255, 255, 0.9);
+            color: var(--dark-color);
+            border: none;
+            padding: 10px 20px;
+            border-radius: var(--border-radius-sm);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-weight: 600;
+            transition: var(--transition);
+        }
+
+        .thumbnail-btn:hover {
+            background: white;
+            transform: translateY(-2px);
+        }
+
+        /* Video Info */
+        .video-info {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        .video-title {
+            font-size: 1.5rem;
+            font-weight: 600;
+            line-height: 1.4;
+        }
+
+        .video-description {
+            color: var(--gray-color);
+            line-height: 1.6;
+            max-height: 100px;
+            overflow-y: auto;
+            padding-right: 10px;
+        }
+
+        .video-description::-webkit-scrollbar {
+            width: 5px;
+        }
+
+        .video-description::-webkit-scrollbar-track {
+            background: var(--lighter-color);
+            border-radius: 5px;
+        }
+
+        .video-description::-webkit-scrollbar-thumb {
+            background: var(--primary-color);
+            border-radius: 5px;
+        }
+
+        .video-meta {
+            display: flex;
+            gap: 20px;
+            color: var(--gray-color);
+            font-size: 0.95rem;
+            flex-wrap: wrap;
+        }
+
+        .video-meta span {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        /* Copy Buttons */
+        .copy-buttons {
+            display: flex;
+            gap: 10px;
+            margin-top: 15px;
+            flex-wrap: wrap;
+        }
+
+        /* Format Selection */
+        .format-section {
+            background: var(--lighter-color);
+            border-radius: var(--border-radius);
+            padding: 30px;
+            border: 1px solid var(--border-color);
+        }
+
+        .format-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 25px;
+            flex-wrap: wrap;
+            gap: 15px;
+        }
+
+        .format-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-bottom: 25px;
+        }
+
+        .format-card {
+            background: var(--card-bg);
+            border-radius: var(--border-radius-sm);
+            padding: 20px;
+            border: 2px solid transparent;
+            cursor: pointer;
+            transition: var(--transition);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .format-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 3px;
+            background: var(--gradient);
+            transform: scaleX(0);
+            transition: var(--transition);
+        }
+
+        .format-card:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 5px 15px var(--shadow-color);
+        }
+
+        .format-card.selected {
+            border-color: var(--primary-color);
+            background: rgba(99, 102, 241, 0.05);
+        }
+
+        .format-card.selected::before {
+            transform: scaleX(1);
+        }
+
+        .format-card-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 10px;
+        }
+
+        .format-type {
+            font-size: 0.8rem;
+            padding: 4px 12px;
+            background: var(--gradient);
+            border-radius: 20px;
+            font-weight: 600;
+            color: white;
+        }
+
+        .format-quality {
+            font-size: 1.1rem;
+            font-weight: 600;
+            color: var(--dark-color);
+        }
+
+        .format-details {
+            font-size: 0.9rem;
+            color: var(--gray-color);
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+        }
+
+        /* Download Action */
+        .download-action {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+            flex-wrap: wrap;
+        }
+
+        .quality-select {
+            flex: 1;
+            min-width: 200px;
+            padding: 15px;
+            background: var(--lighter-color);
+            border: 2px solid var(--border-color);
+            border-radius: var(--border-radius);
+            color: var(--dark-color);
+            font-size: 1rem;
+            cursor: pointer;
+            transition: var(--transition);
+        }
+
+        .quality-select:focus {
+            outline: none;
+            border-color: var(--primary-color);
+        }
+
+        .btn-download {
+            padding: 18px 45px;
+            font-size: 1.1rem;
+            background: linear-gradient(135deg, var(--accent-color), var(--primary-color));
+            color: white;
+            border: none;
+            border-radius: var(--border-radius);
+            cursor: pointer;
+            transition: var(--transition);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .btn-download:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 25px rgba(236, 72, 153, 0.4);
+        }
+
+        /* Loading State */
+        .loading {
+            text-align: center;
+            padding: 60px 0;
+        }
+
+        .spinner {
+            width: 60px;
+            height: 60px;
+            border: 4px solid var(--border-color);
+            border-top: 4px solid var(--primary-color);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 20px;
+        }
+
+        .loading-text {
+            color: var(--gray-color);
+            font-size: 1.1rem;
+        }
+
+        /* Messages */
+        .message {
+            padding: 20px;
+            border-radius: var(--border-radius);
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            animation: slideInDown 0.5s ease;
+        }
+
+        .message.error {
+            background: rgba(239, 68, 68, 0.1);
+            border: 1px solid var(--danger-color);
+            color: var(--danger-color);
+        }
+
+        .message.warning {
+            background: rgba(245, 158, 11, 0.1);
+            border: 1px solid var(--warning-color);
+            color: var(--warning-color);
+        }
+
+        .message.success {
+            background: rgba(16, 185, 129, 0.1);
+            border: 1px solid var(--success-color);
+            color: var(--success-color);
+        }
+
+        .message i {
+            font-size: 1.5rem;
+        }
+
+        /* Cookies Upload */
+        .cookies-upload {
+            background: rgba(245, 158, 11, 0.05);
+            border: 2px dashed var(--warning-color);
+            border-radius: var(--border-radius);
+            padding: 30px;
+            text-align: center;
+            margin-top: 20px;
+            animation: pulse 2s infinite;
+        }
+
+        .upload-area {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 15px;
+            cursor: pointer;
+        }
+
+        .upload-area i {
+            font-size: 3rem;
+            color: var(--warning-color);
+        }
+
+        /* History Section */
+        .history-section {
+            margin-top: 60px;
+        }
+
+        .history-title {
+            font-size: 1.8rem;
+            margin-bottom: 30px;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .history-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 20px;
+        }
+
+        .history-card {
+            background: var(--card-bg);
+            border-radius: var(--border-radius);
+            padding: 20px;
+            border: 1px solid var(--border-color);
+            transition: var(--transition);
+        }
+
+        .history-card:hover {
+            transform: translateY(-5px);
+            border-color: var(--primary-color);
+            box-shadow: var(--box-shadow);
+        }
+
+        /* Footer */
+        .footer {
+            margin-top: 80px;
+            padding: 40px 0;
+            border-top: 1px solid var(--border-color);
+            text-align: center;
+            color: var(--gray-color);
+        }
+
+        /* Toast Notification */
+        .toast {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            background: var(--card-bg);
+            color: var(--dark-color);
+            padding: 15px 25px;
+            border-radius: var(--border-radius);
+            box-shadow: var(--box-shadow-lg);
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            z-index: 1000;
+            transform: translateX(150%);
+            transition: transform 0.3s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+            border: 1px solid var(--border-color);
+            max-width: 400px;
+        }
+
+        .toast.show {
+            transform: translateX(0);
+        }
+
+        .toast i {
+            font-size: 1.5rem;
+            color: var(--success-color);
+        }
+
+        .toast.error i {
+            color: var(--danger-color);
+        }
+
+        .toast.warning i {
+            color: var(--warning-color);
+        }
+
+        /* Animations */
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @keyframes fadeInDown {
+            from {
+                opacity: 0;
+                transform: translateY(-30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @keyframes slideInRight {
+            from {
+                opacity: 0;
+                transform: translateX(30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateX(0);
+            }
+        }
+
+        @keyframes slideInDown {
+            from {
+                opacity: 0;
+                transform: translateY(-30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        @keyframes shine {
+            0% { transform: translateX(-100%) translateY(-100%) rotate(45deg); }
+            100% { transform: translateX(100%) translateY(100%) rotate(45deg); }
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.7; }
+        }
+
+        @keyframes shimmer {
+            0% { transform: translateX(-100%); }
+            100% { transform: translateX(100%); }
+        }
+
+        /* Responsive Design */
+        @media (max-width: 768px) {
+            .container {
+                padding: 0 15px;
+            }
+
+            .logo-container {
+                flex-direction: column;
+                text-align: center;
+                gap: 10px;
+            }
+
+            .logo-text {
+                font-size: 2rem;
+            }
+
+            .input-group {
+                flex-direction: column;
+            }
+
+            .format-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .download-action {
+                flex-direction: column;
+            }
+
+            .quality-select {
+                width: 100%;
+            }
+
+            .api-status, .theme-toggle {
+                position: static;
+                margin-bottom: 20px;
+                animation: fadeIn 0.5s ease;
+            }
+
+            .status-badge {
+                justify-content: center;
+            }
+
+            .theme-toggle {
+                display: flex;
+                justify-content: center;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .download-card {
+                padding: 25px;
+            }
+
+            .btn {
+                padding: 15px 25px;
+                width: 100%;
+            }
+
+            .video-meta {
+                flex-direction: column;
+                gap: 10px;
+            }
+
+            .copy-buttons {
+                flex-direction: column;
+            }
+
+            .copy-buttons button {
+                width: 100%;
+            }
+        }
+    </style>
+</head>
+<body data-theme="light">
+    <!-- Theme Toggle -->
+    <div class="theme-toggle">
+        <button class="toggle-btn" id="themeToggle">
+            <i class="fas fa-moon"></i>
+        </button>
+    </div>
+
+    <!-- API Status Indicator -->
+    <div class="api-status">
+        <div class="status-badge">
+            <span class="status-indicator" id="statusIndicator"></span>
+            <span id="statusText">Checking Server Status...</span>
+        </div>
+    </div>
+
+    <!-- Toast Notification -->
+    <div class="toast" id="toast">
+        <i class="fas fa-check-circle"></i>
+        <span id="toastMessage">Copied to clipboard!</span>
+    </div>
+
+    <div class="container">
+        <!-- Header -->
+        <header class="header">
+            <div class="logo-container">
+                <div class="logo">
+                <img src="favicon.png", style="width:80px"><img>
+                </div>
+                <div>
+                    <h1 class="logo-text">NX Downloader</h1>
+                    <p class="tagline">Download videos from YouTube with premium quality</p><br>
+                            <span><b><font style="font-size: 20px";>Support & Follow Us:</b></span><br>
+                                <b><font color="red"><i class="fab fa-youtube" style="font-size: 20px";></i></font> <a href="https://youtube.com/@aiappfactory"><font color="red" style="font-size: 20px";>Subscribe YT Channel: aiappfactory</font></b></a><br>
+                                <b><font color="pink"<i class="fab fa-instagram" style="font-size: 20px";></i></font> <a href="https://instagram.com/@aiappfactory"><font color="pink" style="font-size: 20px";>Follow On IG: @aiappfactory</font></b></a><br>
+                                <b><font color="blue"><i class="fab fa-telegram" style="font-size: 20px";></i></font> <a href="https://t.me/AiAppFactory"><font color="purple" style="font-size: 20px";>Join TG Channel: AIAppFactory</font></b></a>                   
+                </div>
+            </div>
+        </header>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <!-- Download Card -->
+            <div class="download-card">
+                <h2 class="card-title">
+                    <i class="fas fa-link"></i>
+                    Paste Video URL
+                </h2>
+
+                <!-- Input Section -->
+                <div class="input-section">
+                    <div class="input-group">
+                        <input type="text" 
+                               id="videoUrl" 
+                               class="url-input" 
+                               placeholder="https://www.youtube.com/watch?v=..." 
+                               autocomplete="off">
+                        <button id="fetchBtn" class="btn btn-primary">
+                            <i class="fas fa-search"></i>
+                            Get Formats
+                        </button>
+                    </div>
+
+                    <!-- Progress Bar -->
+                    <div class="progress-container" id="progressContainer">
+                        <div class="progress-header">
+                            <span id="progressText">Preparing download...</span>
+                            <span id="progressPercent">0%</span>
+                        </div>
+                        <div class="progress-bar">
+                            <div class="progress-fill" id="progressFill"></div>
+                        </div>
+                    </div>
+
+                    <div class="supported-sites">
+                        <span>Supported:</span>
+                        <div class="site-icons">
+                            <i class="fab fa-youtube" title="YouTube"></i>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Messages -->
+                <div id="messageContainer"></div>
+
+                <!-- Preview Section -->
+                <div class="preview-section" id="previewSection">
+                    <!-- Preview content will be loaded here -->
+                </div>
+
+                <!-- Loading State -->
+                <div class="loading" id="loadingState" style="display: none;">
+                    <div class="spinner"></div>
+                    <p class="loading-text" id="loadingText">Fetching video information...</p>
+                </div>
+            </div>
+
+            <!-- Cookies Upload Section -->
+            <div class="cookies-upload" id="cookiesUpload" style="display: none;">
+                <div class="upload-area" onclick="document.getElementById('cookiesFile').click()">
+                    <i class="fas fa-cookie-bite"></i>
+                    <h3>Cookies Required</h3>
+                    <p>This video requires cookies to be downloaded.</p>
+                    <p>Click here to upload your cookies.txt file</p>
+                    <input type="file" 
+                           id="cookiesFile" 
+                           accept=".txt" 
+                           style="display: none;"
+                           onchange="handleCookiesUpload(event)">
+                </div>
+            </div>
+
+            <!-- History Section -->
+            <div class="history-section" id="historySection">
+                <div class="format-header">
+                    <h2 class="history-title">
+                        <i class="fas fa-history"></i>
+                        Recent Downloads
+                    </h2>
+                    <button class="btn btn-secondary btn-sm" onclick="clearHistory()">
+                        <i class="fas fa-trash"></i>
+                        Clear History
+                    </button>
+                </div>
+                <div class="history-grid" id="historyGrid">
+                    <!-- History items will be loaded here -->
+                </div>
+            </div>
+        </main>
+
+        <!-- Footer -->
+                            <span><b><font style="font-size: 20px";>Support & Follow Us:</b></span><br>
+                                <b><font color="red"><i class="fab fa-youtube" style="font-size: 20px";></i></font> <a href="https://youtube.com/@aiappfactory"><font color="red" style="font-size: 20px";>Subscribe YT Channel : aiappfactory</font></b></a><br>
+                                <b><font color="pink"<i class="fab fa-instagram" style="font-size: 20px";></i></font> <a href="https://instagram.com/@aiappfactory"><font color="pink" style="font-size: 20px";>Follow On IG: @aiappfactory</font></b></a><br>
+                                <b><font color="blue"><i class="fab fa-telegram" style="font-size: 20px";></i></font> <a href="https://t.me/AiAppFactory"><font color="purple" style="font-size: 20px";>Join TG Channel: AIAppFactory</font></b></a><br>                       
+        <footer class="footer">
+            <p>NX Downloader &copy; 2026 | Powered by NonXNetwork</p>
+            <p style="margin-top: 10px; font-size: 0.9rem; color: var(--gray-color);">
+                Download videos responsibly and respect copyright laws
+            </p>
+        </footer>
+    </div>
+
+    <script>
+
+history.replaceState(null, "", location.href);
+window.onpopstate = () => history.go(1);
+
+        // Configuration
+        const API_BASE_URL = 'https://nx-ib1q.onrender.com';
+        let currentFormats = [];
+        let currentVideoInfo = null;
+        let selectedFormatId = 'best';
+        let downloadHistory = JSON.parse(localStorage.getItem('nxDownloadHistory') || '[]');
+        let isDarkMode = localStorage.getItem('darkMode') === 'true';
+
+        // DOM Elements
+        const videoUrlInput = document.getElementById('videoUrl');
+        const fetchBtn = document.getElementById('fetchBtn');
+        const previewSection = document.getElementById('previewSection');
+        const loadingState = document.getElementById('loadingState');
+        const loadingText = document.getElementById('loadingText');
+        const messageContainer = document.getElementById('messageContainer');
+        const cookiesUpload = document.getElementById('cookiesUpload');
+        const historyGrid = document.getElementById('historyGrid');
+        const statusIndicator = document.getElementById('statusIndicator');
+        const statusText = document.getElementById('statusText');
+        const progressContainer = document.getElementById('progressContainer');
+        const progressText = document.getElementById('progressText');
+        const progressPercent = document.getElementById('progressPercent');
+        const progressFill = document.getElementById('progressFill');
+        const toast = document.getElementById('toast');
+        const toastMessage = document.getElementById('toastMessage');
+        const themeToggle = document.getElementById('themeToggle');
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', () => {
+            console.log('NX Downloader initialized');
+            
+            // Set initial theme
+            setTheme(isDarkMode);
+            
+            // Check API status
+            checkApiStatus();
+            
+            // Load history
+            loadHistory();
+            
+            // Setup event listeners
+            setupEventListeners();
+            
+            // Auto-check API status every 30 seconds
+            setInterval(checkApiStatus, 30000);
+        });
+
+        // Setup event listeners
+        function setupEventListeners() {
+            // Fetch button click
+            fetchBtn.addEventListener('click', fetchVideoInfo);
+            
+            // Enter key in URL input
+            videoUrlInput.addEventListener('keypress', (e) => {
+                if (e.key === 'Enter') {
+                    fetchVideoInfo();
+                }
+            });
+            
+            // Theme toggle
+            themeToggle.addEventListener('click', toggleTheme);
+        }
+
+        // Theme functions
+        function setTheme(dark) {
+            isDarkMode = dark;
+            document.body.setAttribute('data-theme', dark ? 'dark' : 'light');
+            themeToggle.innerHTML = dark ? '<i class="fas fa-sun"></i>' : '<i class="fas fa-moon"></i>';
+            localStorage.setItem('darkMode', dark);
+        }
+
+        function toggleTheme() {
+            setTheme(!isDarkMode);
+            showToast('Theme changed to ' + (isDarkMode ? 'dark' : 'light') + ' mode');
+        }
+
+        // Show toast notification
+        function showToast(message, type = 'success') {
+            toastMessage.textContent = message;
+            toast.className = `toast ${type}`;
+            toast.classList.add('show');
+            
+            setTimeout(() => {
+                toast.classList.remove('show');
+            }, 3000);
+        }
+
+        // Check API status
+        async function checkApiStatus() {
+            try {
+                const response = await fetch(`${API_BASE_URL}/admin`, {
+                    method: 'GET',
+                    headers: {
+                        'Accept': 'application/json',
+                        'Cache-Control': 'no-cache'
+                    }
+                });
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    statusIndicator.className = 'status-indicator online';
+                    statusText.textContent = 'Server is Online';
+                    statusText.title = data.status || 'Backend running';
+                    return true;
+                } else {
+                    throw new Error('API not responding');
+                }
+            } catch (error) {
+                statusIndicator.className = 'status-indicator offline';
+                statusText.textContent = 'Server is Offline';
+                statusText.title = 'Cannot connect to backend';
+                return false;
+            }
+        }
+
+        // Fetch video information
+        async function fetchVideoInfo() {
+            const videoUrl = videoUrlInput.value.trim();
+            
+            if (!videoUrl) {
+                showMessage('Please enter a video URL', 'error');
+                videoUrlInput.focus();
+                return;
+            }
+            
+            if (!isValidUrl(videoUrl)) {
+                showMessage('Please enter a valid URL', 'error');
+                return;
+            }
+            
+            // check API status first
+            const apiOnline = await checkApiStatus();
+            if (!apiOnline) {
+                showMessage('Backend server is offline. Please try again later.', 'error');
+                return;
+            }
+            
+            // Show loading state
+            showLoading(true, 'Fetching video information...');
+            hideMessage();
+            hidePreview();
+            
+            try {
+                // Make API call with dry:true to get formats
+                const response = await fetch(`${API_BASE_URL}/download`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        url: videoUrl,
+                        quality: 'best',
+                        dry: true
+                    })
+                });
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}`);
+                }
+                
+                const data = await response.json();
+                
+                // Check if cookies are required
+                if (data.needs_cookies) {
+                    showCookiesUpload();
+                    showMessage('This video requires cookies for download. Please upload cookies.txt file.', 'warning');
+                    return;
+                }
+                
+                // Store video info and formats
+                currentVideoInfo = data.info;
+                currentFormats = data.info.formats || [];
+                
+                // Show preview
+                showPreview(data.info);
+                showFormats(currentFormats);
+                
+                // Hide cookies upload if visible
+                cookiesUpload.style.display = 'none';
+                
+            } catch (error) {
+                console.error('Error fetching video info:', error);
+                showMessage('Failed to fetch video information. Please check the URL and try again.', 'error');
+            } finally {
+                showLoading(false);
+            }
+        }
+
+        // Show preview section
+        function showPreview(info) {
+            const previewHTML = `
+                <div class="preview-card">
+                    <div class="preview-content">
+                        <div class="thumbnail-container">
+                            <img src="${info.thumbnail}" 
+                                 alt="${info.title}" 
+                                 class="thumbnail"
+                                 onclick="downloadThumbnail('${info.thumbnail}', '${info.title}')"
+                                 onerror="this.src='https://via.placeholder.com/300x169/6366f1/ffffff?text=Thumbnail'">
+                            <div class="thumbnail-overlay">
+                                <button class="thumbnail-btn" onclick="downloadThumbnail('${info.thumbnail}', '${info.title}')">
+                                    <i class="fas fa-download"></i>
+                                    Download Thumbnail
+                                </button>
+                            </div>
+                        </div>
+                        <div class="video-info">
+                            <h3 class="video-title" id="videoTitle">${info.title || 'Untitled Video'}</h3>
+                            
+                            ${info.description ? `
+                                <div class="video-description" id="videoDescription">
+                                    ${info.description.length > 200 ? info.description.substring(0, 200) + '...' : info.description}
+                                </div>
+                            ` : ''}
+                            
+                            <div class="copy-buttons">
+                                <button class="btn btn-secondary btn-sm" onclick="copyToClipboard('title')">
+                                    <i class="fas fa-copy"></i>
+                                    Copy Title
+                                </button>
+                                <button class="btn btn-secondary btn-sm" onclick="copyToClipboard('description')">
+                                    <i class="fas fa-copy"></i>
+                                    Copy Description
+                                </button>
+                            </div>
+                            
+                            <div class="video-meta">
+                                <span>
+                                    <i class="fas fa-user"></i>
+                                    ${info.uploader || 'Unknown uploader'}
+                                </span>
+                                <span>
+                                    <i class="fas fa-film"></i>
+                                    ${currentFormats.length} formats available
+                                </span>
+                                ${info.duration ? `
+                                    <span>
+                                        <i class="fas fa-clock"></i>
+                                        ${formatDuration(info.duration)}
+                                    </span>
+                                ` : ''}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="format-section">
+                    <div class="format-header">
+                        <h3 style="display: flex; align-items: center; gap: 10px;">
+                            <i class="fas fa-cog"></i>
+                            Available Formats
+                        </h3>
+                        <button class="btn btn-secondary btn-sm" onclick="copyQualityInfo()">
+                            <i class="fas fa-copy"></i>
+                            Copy Quality Info
+                        </button>
+                    </div>
+                    <div class="format-grid" id="formatGrid">
+                        <!-- Formats will be loaded here -->
+                    </div>
+                    <div class="download-action">
+                        <select id="qualitySelect" class="quality-select">
+                            <!-- Quality options will be loaded here -->
+                        </select>
+                        <button id="downloadBtn" class="btn btn-download" onclick="startDownload()">
+                            <i class="fas fa-download"></i>
+                            Start Download
+                        </button>
+                    </div>
+                </div>
+            `;
+            
+            previewSection.innerHTML = previewHTML;
+            previewSection.classList.add('active');
+            
+            // Scroll to preview
+            previewSection.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        }
+
+        // Show available formats
+        function showFormats(formats) {
+            const formatGrid = document.getElementById('formatGrid');
+            const qualitySelect = document.getElementById('qualitySelect');
+            
+            if (!formatGrid || !qualitySelect) return;
+            
+            // Clear existing options
+            formatGrid.innerHTML = '';
+            qualitySelect.innerHTML = '<option value="best">Best Quality (Auto)</option>';
+            
+            // Group formats by type (video/audio)
+            const videoFormats = formats.filter(f => f.vcodec !== 'none');
+            const audioFormats = formats.filter(f => f.acodec !== 'none' && f.vcodec === 'none');
+            
+            // Show video formats
+            if (videoFormats.length > 0) {
+                videoFormats.slice(0, 8).forEach(format => {
+                    const card = createFormatCard(format, 'video');
+                    formatGrid.appendChild(card);
+                    qualitySelect.appendChild(createQualityOption(format));
+                });
+            }
+            
+            // Show audio formats
+            if (audioFormats.length > 0) {
+                audioFormats.slice(0, 4).forEach(format => {
+                    const card = createFormatCard(format, 'audio');
+                    formatGrid.appendChild(card);
+                    qualitySelect.appendChild(createQualityOption(format));
+                });
+            }
+            
+            // Set default selection
+            selectedFormatId = 'best';
+            qualitySelect.value = 'best';
+            
+            // Add event listener for quality select
+            qualitySelect.addEventListener('change', (e) => {
+                selectedFormatId = e.target.value;
+                updateSelectedFormat();
+            });
+        }
+
+        // Create format card
+        function createFormatCard(format, type) {
+            const card = document.createElement('div');
+            card.className = 'format-card';
+            card.dataset.formatId = format.format_id;
+            card.onclick = () => selectFormat(format.format_id);
+            
+            // Determine quality label
+            let qualityLabel = format.format_note || format.format || format.format_id;
+            if (format.height) {
+                qualityLabel = `${format.height}p`;
+                if (format.fps) {
+                    qualityLabel += `@${format.fps}fps`;
+                }
+            } else if (format.abr) {
+                qualityLabel = `${format.abr}kbps`;
+            }
+            
+            // Determine file size
+            let sizeInfo = '';
+            if (format.filesize) {
+                sizeInfo = formatSize(format.filesize);
+            } else if (format.filesize_approx) {
+                sizeInfo = `~${formatSize(format.filesize_approx)}`;
+            }
+            
+            // Determine extension
+            const ext = format.ext || 'mp4';
+            
+            card.innerHTML = `
+                <div class="format-card-header">
+                    <span class="format-type">${type.toUpperCase()}</span>
+                    <span class="format-quality">${qualityLabel}</span>
+                </div>
+                <div class="format-details">
+                    <span>Format: ${ext.toUpperCase()}</span>
+                    ${sizeInfo ? `<span>Size: ${sizeInfo}</span>` : ''}
+                    <span>ID: ${format.format_id}</span>
+                </div>
+            `;
+            
+            return card;
+        }
+
+        // Create quality option
+        function createQualityOption(format) {
+            const option = document.createElement('option');
+            option.value = format.format_id;
+            
+            let label = format.format_note || format.format || format.format_id;
+            if (format.height) {
+                label = `${format.height}p${format.fps ? `@${format.fps}fps` : ''} (${format.ext})`;
+            } else if (format.abr) {
+                label = `Audio ${format.abr}kbps (${format.ext})`;
+            }
+            
+            if (format.filesize) {
+                label += ` - ${formatSize(format.filesize)}`;
+            }
+            
+            option.textContent = label;
+            return option;
+        }
+
+        // Select format
+        function selectFormat(formatId) {
+            selectedFormatId = formatId;
+            document.getElementById('qualitySelect').value = formatId;
+            updateSelectedFormat();
+        }
+
+        // Update selected format UI
+        function updateSelectedFormat() {
+            document.querySelectorAll('.format-card').forEach(card => {
+                card.classList.remove('selected');
+                if (card.dataset.formatId === selectedFormatId) {
+                    card.classList.add('selected');
+                }
+            });
+        }
+
+        // Start download with progress
+        async function startDownload() {
+            if (!currentVideoInfo || !videoUrlInput.value.trim()) {
+                showMessage('Please fetch video information first', 'error');
+                return;
+            }
+            
+            const videoUrl = videoUrlInput.value.trim();
+            
+            // Show progress bar
+            showProgress(true);
+            updateProgress(0, 'Preparing download...');
+            
+            try {
+                const response = await fetch(`${API_BASE_URL}/download`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        url: videoUrl,
+                        quality: selectedFormatId
+                    })
+                });
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}`);
+                }
+                
+                const data = await response.json();
+                
+                if (data.download_url) {
+                    // Simulate download progress
+                    simulateDownloadProgress();
+                    
+                    // Add to history
+                    addToHistory({
+                        title: currentVideoInfo.title,
+                        url: videoUrl,
+                        formatId: selectedFormatId,
+                        thumbnail: currentVideoInfo.thumbnail,
+                        timestamp: new Date().toISOString()
+                    });
+                    
+                    // Start download after progress simulation
+                    setTimeout(() => {
+                        const downloadUrl = `${API_BASE_URL}${data.download_url}`;
+                        window.open(downloadUrl, '_blank');
+                        
+                        updateProgress(100, 'Download complete!');
+                        showMessage('Download started successfully!', 'success');
+                        
+                        // Reset after delay
+                        setTimeout(() => {
+                            hideProgress();
+                            hidePreview();
+                            videoUrlInput.value = '';
+                            videoUrlInput.focus();
+                        }, 2000);
+                    }, 2000);
+                    
+                } else {
+                    throw new Error('No download URL in response');
+                }
+                
+            } catch (error) {
+                console.error('Download error:', error);
+                hideProgress();
+                showMessage('Failed to start download. Please try again.', 'error');
+            }
+        }
+
+        // Simulate download progress
+        function simulateDownloadProgress() {
+            let progress = 0;
+            const interval = setInterval(() => {
+                progress += Math.random() * 10;
+                if (progress >= 90) {
+                    clearInterval(interval);
+                    updateProgress(90, 'Finalizing download...');
+                } else {
+                    updateProgress(progress, 'Downloading...');
+                }
+            }, 200);
+        }
+
+        // Show/hide progress bar
+        function showProgress(show) {
+            progressContainer.style.display = show ? 'block' : 'none';
+        }
+
+        function hideProgress() {
+            progressContainer.style.display = 'none';
+        }
+
+        function updateProgress(percent, text) {
+            progressFill.style.width = percent + '%';
+            progressPercent.textContent = Math.round(percent) + '%';
+            progressText.textContent = text;
+        }
+
+        // Copy functions
+        function copyToClipboard(type) {
+            let text = '';
+            
+            if (type === 'title') {
+                text = document.getElementById('videoTitle')?.textContent || '';
+            } else if (type === 'description') {
+                text = document.getElementById('videoDescription')?.textContent || '';
+            }
+            
+            if (!text) {
+                showToast('Nothing to copy', 'error');
+                return;
+            }
+            
+            navigator.clipboard.writeText(text).then(() => {
+                showToast(`${type.charAt(0).toUpperCase() + type.slice(1)} copied to clipboard!`);
+            }).catch(err => {
+                console.error('Copy failed:', err);
+                showToast('Failed to copy', 'error');
+            });
+        }
+
+        function copyQualityInfo() {
+            const selectedFormat = currentFormats.find(f => f.format_id === selectedFormatId);
+            if (!selectedFormat) {
+                showToast('No format selected', 'error');
+                return;
+            }
+            
+            let info = `Quality: ${selectedFormat.format_note || selectedFormat.format_id}\n`;
+            if (selectedFormat.height) info += `Resolution: ${selectedFormat.height}p\n`;
+            if (selectedFormat.fps) info += `FPS: ${selectedFormat.fps}\n`;
+            if (selectedFormat.filesize) info += `Size: ${formatSize(selectedFormat.filesize)}\n`;
+            info += `Format: ${selectedFormat.ext || 'mp4'}`;
+            
+            navigator.clipboard.writeText(info).then(() => {
+                showToast('Quality info copied to clipboard!');
+            }).catch(err => {
+                console.error('Copy failed:', err);
+                showToast('Failed to copy', 'error');
+            });
+        }
+
+        // Download thumbnail
+        function downloadThumbnail(url, title) {
+            const cleanTitle = title.replace(/[^\w\s]/gi, '').substring(0, 50);
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = `${cleanTitle}_thumbnail.jpg`;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            showToast('Thumbnail download started!');
+        }
+
+        // Handle cookies upload
+        function handleCookiesUpload(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            
+            if (file.type !== 'text/plain' && !file.name.endsWith('.txt')) {
+                showMessage('Please upload a valid cookies.txt file', 'error');
+                return;
+            }
+            
+            showLoading(true, 'Uploading cookies...');
+            
+            // In a real implementation, you would upload this to your backend
+            setTimeout(() => {
+                showLoading(false);
+                showToast('Cookies uploaded successfully!');
+                cookiesUpload.style.display = 'none';
+                
+                // Try fetching video info again
+                setTimeout(() => fetchVideoInfo(), 1000);
+            }, 1500);
+        }
+
+        // History functions
+        function loadHistory() {
+            if (downloadHistory.length === 0) {
+                historyGrid.innerHTML = `
+                    <div style="grid-column: 1/-1; text-align: center; padding: 40px; color: var(--gray-color);">
+                        <i class="fas fa-history fa-3x" style="margin-bottom: 20px; opacity: 0.5;"></i>
+                        <h3>No download history</h3>
+                        <p>Your downloaded videos will appear here</p>
+                    </div>
+                `;
+                return;
+            }
+            
+            // Show last 6 downloads
+            const recentHistory = downloadHistory.slice(-6).reverse();
+            
+            historyGrid.innerHTML = recentHistory.map(item => `
+                <div class="history-card">
+                    <div style="display: flex; gap: 15px; margin-bottom: 15px;">
+                        <img src="${item.thumbnail}" 
+                             alt="${item.title}"
+                             style="width: 80px; height: 45px; border-radius: 6px; object-fit: cover;"
+                             onerror="this.src='https://via.placeholder.com/80x45/6366f1/ffffff?text=NX'">
+                        <div style="flex: 1;">
+                            <h4 style="font-size: 0.95rem; margin-bottom: 5px; line-height: 1.3; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;">
+                                ${item.title}
+                            </h4>
+                            <p style="font-size: 0.8rem; color: var(--gray-color);">
+                                ${new Date(item.timestamp).toLocaleDateString()}
+                            </p>
+                        </div>
+                    </div>
+                    <button class="btn-secondary" style="width: 100%; padding: 10px; font-size: 0.9rem;" 
+                            onclick="redownload('${item.url}', '${item.formatId}')">
+                        <i class="fas fa-redo"></i>
+                        Download Again
+                    </button>
+                </div>
+            `).join('');
+        }
+
+        function addToHistory(item) {
+            downloadHistory.push(item);
+            
+            // Keep only last 50 items
+            if (downloadHistory.length > 50) {
+                downloadHistory = downloadHistory.slice(-50);
+            }
+            
+            localStorage.setItem('nxDownloadHistory', JSON.stringify(downloadHistory));
+            loadHistory();
+        }
+
+        function clearHistory() {
+            if (confirm('Are you sure you want to clear all download history?')) {
+                downloadHistory = [];
+                localStorage.removeItem('nxDownloadHistory');
+                loadHistory();
+                showToast('History cleared successfully!');
+            }
+        }
+
+        function redownload(url, formatId) {
+            videoUrlInput.value = url;
+            selectedFormatId = formatId;
+            fetchVideoInfo();
+        }
+
+        // Utility functions
+        function isValidUrl(string) {
+            try {
+                new URL(string);
+                return true;
+            } catch (_) {
+                return false;
+            }
+        }
+
+        function formatSize(bytes) {
+            if (!bytes) return 'Unknown';
+            const k = 1024;
+            const sizes = ['B', 'KB', 'MB', 'GB'];
+            const i = Math.floor(Math.log(bytes) / Math.log(k));
+            return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+        }
+
+        function formatDuration(seconds) {
+            if (!seconds) return 'Unknown';
+            const hours = Math.floor(seconds / 3600);
+            const minutes = Math.floor((seconds % 3600) / 60);
+            const secs = Math.floor(seconds % 60);
+            
+            if (hours > 0) {
+                return `${hours}:${minutes.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+            } else {
+                return `${minutes}:${secs.toString().padStart(2, '0')}`;
+            }
+        }
+
+        function showLoading(show, text = 'Loading...') {
+            if (show) {
+                loadingText.textContent = text;
+                loadingState.style.display = 'block';
+                fetchBtn.disabled = true;
+            } else {
+                loadingState.style.display = 'none';
+                fetchBtn.disabled = false;
+            }
+        }
+
+        function showMessage(text, type = 'info') {
+            hideMessage();
+            
+            const message = document.createElement('div');
+            message.className = `message ${type}`;
+            message.innerHTML = `
+                <i class="fas fa-${type === 'error' ? 'exclamation-circle' : 
+                                  type === 'warning' ? 'exclamation-triangle' : 
+                                  type === 'success' ? 'check-circle' : 'info-circle'}"></i>
+                <span>${text}</span>
+            `;
+            
+            messageContainer.appendChild(message);
+            
+            // Auto-remove after 5 seconds
+            setTimeout(() => {
+                if (message.parentNode) {
+                    message.style.opacity = '0';
+                    message.style.transform = 'translateY(-10px)';
+                    setTimeout(() => {
+                        if (message.parentNode) {
+                            messageContainer.removeChild(message);
+                        }
+                    }, 300);
+                }
+            }, 5000);
+        }
+
+        function hideMessage() {
+            messageContainer.innerHTML = '';
+        }
+
+        function hidePreview() {
+            previewSection.classList.remove('active');
+            previewSection.innerHTML = '';
+        }
+
+        function showCookiesUpload() {
+            cookiesUpload.style.display = 'block';
+            cookiesUpload.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        }
+
+        // Make functions available globally
+        window.handleCookiesUpload = handleCookiesUpload;
+        window.redownload = redownload;
+        window.selectFormat = selectFormat;
+        window.startDownload = startDownload;
+        window.downloadThumbnail = downloadThumbnail;
+        window.copyToClipboard = copyToClipboard;
+        window.copyQualityInfo = copyQualityInfo;
+        window.clearHistory = clearHistory;
+    </script>
+</body>
+</html>
