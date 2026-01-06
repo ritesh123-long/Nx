@@ -2,7 +2,7 @@ import os
 import time
 import uuid
 import threading
-from flask import Flask, request, send_file, jsonify
+from flask import Flask, request, send_file, jsonify, render_template
 from yt_dlp import YoutubeDL
 from flask_cors import CORS   # ✅ added
 
@@ -150,15 +150,16 @@ def serve(name):
     return send_file(p, as_attachment=True)
 
 @app.route("/admin")
-def home():
+def admin_status():
     return jsonify({
         "status": "yt-dlp backend running",
         "cookies_present": os.path.exists(COOKIE_FILE)
+    })
 
-@app.get("/")
+
+@app.route("/")
 def home():
     return render_template("home.html")
-    })
 
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 10000))
